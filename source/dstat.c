@@ -134,9 +134,9 @@ int main( int argc, char * argv[] )
 
 		XCloseDisplay( display );
 
-		usleep( 500000 );
+		usleep( PERIOD_MSECS * 1000 );
 	}
-
+	
 	return 0;
 }
 
@@ -377,6 +377,8 @@ static int format_date( char * cursor, int limit, enum config_arg arg )
 			return snprintf( cursor, limit, "%02d.%02d.%04d", m, d, y );
 		case ARG_DDMMYYYY:
 			return snprintf( cursor, limit, "%02d.%02d.%04d", d, m, y );
+		case ARG_HIDE:
+			return 0;
 		default:
 			return fail( "`date` parsed incorrectly" );
 	}
@@ -403,6 +405,8 @@ static int format_time( char * cursor, int limit, enum config_arg arg )
 			return snprintf( cursor, limit, "%d:%02d", h, m );
 		case ARG_HHMMSS:
 			return snprintf( cursor, limit, "%d:%02d:%02d", h, m, s );
+		case ARG_HIDE:
+			return 0;
 		default:
 			return fail( "`time` parsed incorrectly" );
 	}
