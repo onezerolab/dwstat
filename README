@@ -1,4 +1,16 @@
 dstat readme
 ============
 
-dstat is a simple informer for dwm (dynamic window manager, see http://dwm.suckless.org).Now dstat simply print current time.To build dstat:----cd <dstat-dir>/projectmake----Output binary will be placed at <dstat-dir>/build/release/dstat.
+dstat is a simple informer for dwm (dynamic window manager, see http://dwm.suckless.org).
+Now it can:
+* show date;
+* show time.
+
+
+To build dstat:
+----
+cd <dstat-dir>/project
+make
+----
+
+Output binary will be placed at <dstat-dir>/build/release/dstat.

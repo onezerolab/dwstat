@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
@@ -12,22 +13,22 @@
 
 #include <dstat.h>
 
-#define LOCAL_CONF "/.dstat.conf"
 
 
+enum config_param { NO_PARAM,
+		    PARAM_DATE,
+		    PARAM_TIME,
+		    COUNT_PARAMS };
 
-static const int MESSAGE_LENGTH = 128;
-static const int MAX_CONFIG_SIZE = 2048;
-static const int MAX_HOME_LENGTH = _MAXPATH - sizeof( LOCAL_CONF );
-
-
-
-enum config_param { NO_PARAM, PARAM_DATE,
-			       PARAM_TIME, COUNT_PARAMS };
-enum config_arg { NO_ARG, ARG_HIDE, ARG_DDMM, ARG_MMDD,
-			   ARG_DDMMYYYY, ARG_MMDDYYYY,
-			   ARG_HHMM, ARG_HHMMSS,
-			   COUNT_ARGS };
+enum config_arg { NO_ARG,
+                  ARG_HIDE,
+                  ARG_DDMM,
+                  ARG_MMDD,
+                  ARG_DDMMYYYY,
+                  ARG_MMDDYYYY,
+                  ARG_HHMM,
+                  ARG_HHMMSS,
+                  COUNT_ARGS };
 
 			   
 
@@ -42,8 +43,8 @@ struct param_desc
 
 struct param_arg
 {
-	config_param param;
-	config_arg arg;
+	enum config_param param;
+	enum config_arg arg;
 };
 
 
@@ -51,7 +52,7 @@ struct config
 {
 	struct param_arg order[ COUNT_PARAMS ];
 	int nof_params;
-}
+};
 
 
 
@@ -61,18 +62,18 @@ static const char * ARGS[ COUNT_ARGS ] = {
 	"hh:mm", "hh:mm:ss"
 };
 
-static const config_arg NO_ARGS[] = { NO_ARG };
+static const enum config_arg NO_ARGS[] = { NO_ARG };
 
-static const config_arg DATE_ARGS[] = {
+static const enum config_arg DATE_ARGS[] = {
 	ARG_HIDE, ARG_DDMM, ARG_MMDD, ARG_DDMMYYYY, ARG_MMDDYYYY
 };
 
-static const config_arg TIME_ARGS[] = {
+static const enum config_arg TIME_ARGS[] = {
 	ARG_HIDE, ARG_HHMM, ARG_HHMMSS
 };
 
-#define PARAM( title, arr ) { title, arr, sizeof( arr ) / sizeof( config_type ) }
-static const param_desc PARAMS[ COUNT_PARAMS ] = {
+#define PARAM( title, arr ) { title, arr, sizeof( arr ) / sizeof( enum config_arg ) }
+static const struct param_desc PARAMS[ COUNT_PARAMS ] = {
 	PARAM( "", NO_ARGS ),
 	PARAM( "date", DATE_ARGS ),
 	PARAM( "time", TIME_ARGS )
@@ -81,7 +82,7 @@ static const param_desc PARAMS[ COUNT_PARAMS ] = {
 
 
 static const struct param_arg DEF_CONFIG[] = {
-	{ PARAM_TIME, TIME_HHMM }
+	{ PARAM_TIME, ARG_HHMM }
 };
 
 
@@ -102,10 +103,8 @@ int main( int argc, char * argv[] )
 	int screen;
 	Window window;
 	char status[ MESSAGE_LENGTH + 1 ];
-	time_t secs;
-	struct tm * now;
 	struct config config;
-	char home_conf[ _MAXPATH + 1 ];
+	char home_conf[ PATH_MAX + 1 ];
 	
 	strncpy( home_conf, getenv( "HOME" ), MAX_HOME_LENGTH );
 	home_conf[ MAX_HOME_LENGTH ] = '\0';
@@ -191,6 +190,7 @@ static bool parse_config( const char * path, struct config * config )
 	enum config_param config_param;
 	struct param_arg * param_arg;
 	int index_arg;
+	struct stat stat;
 	
 	assert( path != NULL );
 	assert( config != NULL );
@@ -199,10 +199,15 @@ static bool parse_config( const char * path, struct config * config )
 
 	file = open( path, O_RDONLY );
 	if( file == -1 )
-		return 0;
+		goto error_opening;
+		
+	fprintf( stdout, "parsing config `%s`\n", path );
+
+	if( fstat( file, & stat ) == -1L )
+		goto error_sizing;
+	file_size = stat.st_size;
 	
-	file_size = filelength( file );
-	if( file == -1 )
+	if( file_size < 0 )
 		goto error_sizing;
 	if( file_size > MAX_CONFIG_SIZE )
 		goto error_too_big;
@@ -265,6 +270,9 @@ static bool parse_config( const char * path, struct config * config )
 	source = NULL;
 	
 	return true;
+	
+error_opening:
+	fprintf( stdout, "config `%s` not found\n", path ); goto cleanup; 
 
 error_sizing:
 	report( "can`t determine config size" ); goto cleanup;
@@ -301,7 +309,8 @@ static int format( char * message, const struct config * config )
 	char * cursor;
 	int limit = MESSAGE_LENGTH;
 	int formatted;
-	struct param_arg * param_arg;
+	const struct param_arg * param_arg;
+	int i;
 	
 	assert( message != NULL );
 	assert( config != NULL );
@@ -309,7 +318,7 @@ static int format( char * message, const struct config * config )
 	message[ 0 ] = '\0';
 	cursor = message;
 	
-	for( int i = 0; i < config->nof_params; ++i )
+	for( i = 0; i < config->nof_params; ++i )
 	{
 		param_arg = & config->order[ i ];
 		switch( param_arg->param )
@@ -326,8 +335,17 @@ static int format( char * message, const struct config * config )
 		
 		if( formatted < 0 )
 			return fail( "can`t format parameter" );
+			
 		limit -= formatted;
 		cursor += formatted;
+		
+		if( limit == 0 )
+			break;
+			
+		* cursor = ' ';
+		++cursor;
+		* cursor = '\0';
+		--limit;
 	}
 	
 	return 0;
@@ -352,13 +370,13 @@ static int format_date( char * cursor, int limit, enum config_arg arg )
 	switch( arg )
 	{
 		case ARG_MMDD:
-			return snprintf( cursor, limit, "%02d:%02d", m, d );
+			return snprintf( cursor, limit, "%02d.%02d", m, d );
 		case ARG_DDMM:
-			return snprintf( cursor, limit, "%02d:%02d", d, m );
+			return snprintf( cursor, limit, "%02d.%02d", d, m );
 		case ARG_MMDDYYYY:
-			return snprintf( cursor, limit, "%02d:%02d:%04d", m, d, y );
+			return snprintf( cursor, limit, "%02d.%02d.%04d", m, d, y );
 		case ARG_DDMMYYYY:
-			return snprintf( cursor, limit, "%02d:%02d:%04d", d, m, y );
+			return snprintf( cursor, limit, "%02d.%02d.%04d", d, m, y );
 		default:
 			return fail( "`date` parsed incorrectly" );
 	}
