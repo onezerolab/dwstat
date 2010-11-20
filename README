@@ -9,8 +9,8 @@ Right now it can:
 
 To build dstat:
 ----
-cd <dstat-dir>/project
+cd <dwstat-dir>/project
 make
 ----
 
-Output binary will be placed at <dstat-dir>/build/release/dstat.
+Output binary will be placed at <dwstat-dir>/build/release/dstat.
