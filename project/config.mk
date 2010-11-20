@@ -2,7 +2,7 @@ COMPILER = gcc
 CLEAN = rm -rf
 STRIP = strip
 
-OUTPUT = dstat
+OUTPUT = dwstat
 OUT_DIR = .
 LIBS = X11
 

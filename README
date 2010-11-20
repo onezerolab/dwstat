@@ -1,10 +1,10 @@
-dstat readme
+dwstat readme
 ============
 
-dstat is a simple informer for dwm (dynamic window manager, see http://dwm.suckless.org).
-Now it can:
-* show date;
-* show time.
+dwstat is a simple informer for dwm (dynamic window manager, see http://dwm.suckless.org).
+Right now it can:
+* show date in various formats (dd.mm, mm.dd, dd.mm.yyyy, mm.dd.yyyy);
+* show time in various formats (hh:mm, hh:mm:ss).
 
 
 To build dstat:
